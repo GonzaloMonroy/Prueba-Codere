@@ -1,0 +1,162 @@
+﻿@page "/empleados"
+
+@using BlazorCrud.Shared;
+@using CurrieTechnologies.Razor.SweetAlert2;
+@using PruebaCodere.client.Services;
+
+@inject SweetAlertService Alert;
+@inject EmpleadosIDService empleadoService;
+@inject GrupoIDService GrupoService;
+@inject NavigationManager navegacion;
+
+<a class="btn btn-success btn-sm mb-3" href="/Empleado">Crear Empleado</a>
+
+<EditForm Model="empleado" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <!-- Grupo -->
+    <div class="mb-3">
+        <label class="form-label">Grupo</label>
+        <InputSelect class="form-select" @bind-Value="empleado.GrupoId" @onchange="(e) => FiltrarEmpleados()">
+
+            <option value="0">--Seleccionar--</option>
+            @if (ListaGrupo != null && ListaGrupo.Any())
+            {
+                @foreach (var item in ListaGrupo)
+                {
+                    <option value="@item.GrupoId">@item.GrupoId</option>
+                    @* Console.WriteLine("My debug output.", ListaGrupo, item.NomOficina); *@
+                }
+            }
+            else
+            {
+                <option value="0">No hay grupos disponibles</option>
+            }
+        </InputSelect>
+        <ValidationMessage For="@(() => empleado.GrupoId)"></ValidationMessage>
+    </div>
+
+    <!-- Tabla de Empleados -->
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Nombre Completo</th>
+                <th>Puesto de trabajo</th>
+                <th>Salario Base</th>
+                <th>Supervisor</th>
+                <th>Codigo Empleado</th>
+                <th>Grupo</th>
+                <th>Nombre Oficina</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (listaEmpleado == null)
+            {
+                <tr>
+                    <td colspan="7" align="center">
+                        <img style="width:50px" src="https://media.tenor.com/On7kvXhzml4AAAAj/loading-gif.gif" />
+                    </td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var item in listaEmpleadoFiltrada)
+                {
+                    <tr>
+                        <td>@item.Nombre</td>
+                        <td>@item.PuestoTrabajo</td>
+                        <td>@item.SalarioBase</td>
+                        <td>@item.SupervisorId</td>
+                        <td>@item.CodigoEmpleado</td>
+                        <td>@item.Grupo?.GrupoId</td>
+                        <td>@item.Grupo?.NomOficina</td>
+                        <td>
+                            <a class="btn btn-primary btn-sm" href="/Empleado/@item.EmpleadoId">
+                                <i class="oi oi-pencil"></i>
+                            </a>
+                            <button type="button" class="btn btn-danger btn-sm ms-2" @onclick="(() => Eliminar(item.EmpleadoId))">
+                                <i class="oi oi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</EditForm>
+
+@code {
+    List<EmpleadoDTO>? listaEmpleado = null;
+    List<EmpleadoDTO>? listaEmpleadoFiltrada = null; // Lista filtrada
+    List<GrupoDTO>? ListaGrupo = null; // Lista de grupos (oficinas)
+    EmpleadoDTO empleado = new EmpleadoDTO(); // Empleado actual
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarListaEmpleados();
+        await CargarListaGrupos(); // Cargar la lista de grupos
+        FiltrarEmpleados(); // Inicializar la lista filtrada después de cargar los empleados
+    }
+
+    private async Task CargarListaEmpleados()
+    {
+        listaEmpleado = await empleadoService.Lista();
+        listaEmpleadoFiltrada = listaEmpleado; // Inicializar la lista filtrada
+    }
+
+    private async Task CargarListaGrupos()
+    {
+        ListaGrupo = await GrupoService.Lista(); // Asegúrate de tener un método que obtenga la lista de grupos
+    }
+
+    private void FiltrarEmpleados()
+    {
+            
+        if (empleado.GrupoId == 0) // Verifica si no hay un grupo seleccionado
+        {
+            listaEmpleadoFiltrada = listaEmpleado; // Si no hay filtro, mostrar todos
+        }
+        else
+        {
+            listaEmpleadoFiltrada = listaEmpleado
+                .Where(e => e.Grupo != null && e.Grupo.GrupoId == empleado.GrupoId)
+                .ToList();
+        }
+    }
+
+
+    private async Task Eliminar(int id)
+    {
+        var resultado = await Alert.FireAsync(new SweetAlertOptions
+            {
+                Title = "Eliminar Empleado",
+                Text = "¿Estás seguro de que deseas eliminar este empleado?",
+                Icon = SweetAlertIcon.Question,
+                ShowCancelButton = true
+            });
+
+        if (resultado.IsConfirmed)
+        {
+            var eliminado = await empleadoService.Eliminar(id);
+
+            if (eliminado)
+            {
+                listaEmpleado = listaEmpleado!.Where(e => e.EmpleadoId != id).ToList();
+                FiltrarEmpleados(); // Asegúrate de filtrar nuevamente después de eliminar
+                await Alert.FireAsync("Eliminado", "El empleado ha sido eliminado exitosamente", SweetAlertIcon.Success);
+            }
+
+            else
+            {
+                await Alert.FireAsync("Error", "No se pudo eliminar el empleado", SweetAlertIcon.Error);
+            }
+        }
+    }
+
+    private void HandleValidSubmit()
+    {
+        // Aquí puedes manejar lo que deseas hacer al enviar el formulario
+    }
+}

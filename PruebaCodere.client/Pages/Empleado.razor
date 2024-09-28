@@ -1,0 +1,119 @@
+﻿@page "/empleado"
+@page "/empleado/{IdEmpleadoEditar:int}"
+
+@using BlazorCrud.Shared;
+@using PruebaCodere.client.Services;
+@inject EmpleadosIDService empleadoService;
+@inject GrupoIDService GrupoService;
+@inject NavigationManager navegacion;
+
+<h3>@titulo</h3>
+
+<EditForm Model="empleado" OnValidSubmit="OnValidSubmit">
+    <DataAnnotationsValidator></DataAnnotationsValidator>
+
+    <!-- Nombre -->
+    <div class="mb-3">
+        <label class="form-label">Nombre</label>
+        <InputText class="form-control" @bind-Value="empleado.Nombre"></InputText>
+        <ValidationMessage For="@(() => empleado.Nombre)"></ValidationMessage>
+    </div>
+
+    <!-- Puesto de Trabajo -->
+    <div class="mb-3">
+        <label class="form-label">Puesto de Trabajo</label>
+        <InputText class="form-control" @bind-Value="empleado.PuestoTrabajo"></InputText>
+        <ValidationMessage For="@(() => empleado.PuestoTrabajo)"></ValidationMessage>
+    </div>
+
+    <!-- Salario Base -->
+    <div class="mb-3">
+        <label class="form-label">Salario Base</label>
+        <InputNumber class="form-control" @bind-Value="empleado.SalarioBase"></InputNumber>
+        <ValidationMessage For="@(() => empleado.SalarioBase)"></ValidationMessage>
+    </div>
+
+    <!-- Supervisor ID -->
+    <div class="mb-3">
+        <label class="form-label">Supervisor</label>
+        <InputNumber class="form-control" @bind-Value="empleado.SupervisorId"></InputNumber>
+        <ValidationMessage For="@(() => empleado.SupervisorId)"></ValidationMessage>
+    </div>
+
+    <!-- Código de Empleado -->
+    <div class="mb-3">
+        <label class="form-label">Código de Empleado</label>
+        <InputNumber class="form-control" @bind-Value="empleado.CodigoEmpleado"></InputNumber>
+        <ValidationMessage For="@(() => empleado.CodigoEmpleado)"></ValidationMessage>
+    </div>
+
+    <!-- Grupo -->
+    <div class="mb-3">
+        <label class="form-label">Grupo</label>
+        <InputSelect class="form-select" @bind-Value="empleado.GrupoId">
+            <option value="0">--Seleccionar--</option>
+            @foreach (var item in ListaGrupo)
+            {
+                <option value="@item.GrupoId">@item.NomOficina</option>
+            }
+        </InputSelect>
+        <ValidationMessage For="@(() => empleado.GrupoId)"></ValidationMessage>
+    </div>
+
+
+    <button class="btn btn-primary" href="/empleados" type="submit">@btnTexto</button>
+    <a class="btn btn-warning" href="/empleados">Volver</a>
+</EditForm>
+@code {
+    [Parameter]
+    public int IdEmpleadoEditar { get; set; } = 0;
+
+    string titulo = string.Empty;
+    string btnTexto = string.Empty;
+
+    EmpleadoDTO empleado = new EmpleadoDTO();
+    List<GrupoDTO> ListaGrupo = new List<GrupoDTO>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        ListaGrupo = await GrupoService.Lista();
+
+        if (IdEmpleadoEditar != 0)
+        {
+            empleado = await empleadoService.Buscar(IdEmpleadoEditar);
+            btnTexto = "Actualizar Empleado";
+            titulo = "Editar Empleado";
+        }
+        else
+        {
+            btnTexto = "Guardar Empleado";
+            titulo = "Nuevo Empleado";
+        }
+    }
+
+    private async Task OnValidSubmit()
+    {
+        int idDevuelto;
+
+        if (IdEmpleadoEditar == 0)
+        {
+            // Guardar un nuevo empleado
+            idDevuelto = await empleadoService.Guardar(empleado);
+
+            if (idDevuelto != 0)
+            {
+                navegacion.NavigateTo("/empleados");
+            }
+        }
+        else
+        {
+            // Actualizar empleado existente
+            idDevuelto = await empleadoService.Editar(empleado);
+        }
+
+        if (idDevuelto != 0)
+        {
+            navegacion.NavigateTo("/empleados");
+        }
+    }
+}
