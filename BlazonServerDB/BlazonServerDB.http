@@ -1,0 +1,6 @@
+@BlazonServerDB_HostAddress = http://localhost:5078
+
+GET {{BlazonServerDB_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
